@@ -1,0 +1,301 @@
+int led_verm = 13;                
+int led_azul = 12;   
+int led_amarl = 14;
+int led_verde = 15;             
+
+int botao_verm = 33;              
+int botao_azul = 32;  
+int botao_amarl = 25;
+int botao_verde = 26;           
+
+/* Flags para tratar debounce */
+int flag_verm = 0;
+int flag_azul = 0;
+int flag_amarl = 0;
+int flag_verde = 0;
+
+const int MAX_RODADAS = 15;         
+
+int memoria_esp[MAX_RODADAS];     
+int memoria_jogador[MAX_RODADAS];
+
+int modo = 0;                      
+
+int rodada = 1;                    
+int tempo_dificuldade = 750;       
+
+void setup() {
+  
+  Serial.begin(9600); // Configura porta serial
+  
+  pinMode(led_verm, OUTPUT);
+  pinMode(led_azul, OUTPUT);
+  pinMode(led_amarl, OUTPUT);
+  pinMode(led_verde,OUTPUT);
+
+  pinMode(botao_verm, INPUT_PULLUP);
+  pinMode(botao_azul, INPUT_PULLUP);
+  pinMode(botao_amarl,INPUT_PULLUP);
+  pinMode(botao_verde,INPUT_PULLUP);
+}
+
+void loop() {
+  
+  espera_inicio();
+  
+  pisca_leds(3);
+  delay(1000);
+  
+  for(int rodada = 1; rodada <= MAX_RODADAS; rodada++) {
+
+    turno_jogo(rodada);
+    turno_jogador(rodada);
+
+    if(!confere(rodada)) {
+      Serial.println("Errou!");
+      leds_derrota();
+      break; 
+    } else if(rodada == MAX_RODADAS){
+      Serial.println("Venceu!");
+      leds_vitoria();
+    } else {
+      liga_leds();
+      delay(1000);
+      desliga_leds();
+    }
+
+    delay(200);
+  }  
+
+  modo = 0;
+  
+}
+
+void espera_inicio() {
+
+  liga_leds();
+  
+  while( modo == 0 ){
+    
+    if( pressionou_verm() || pressionou_azul() || pressionou_amarl() || pressionou_verde() ) {
+      modo = 1;
+    }
+  }
+
+  for(int i = 0; i < MAX_RODADAS; i++) {
+    memoria_esp[i] = random(0,4);
+  }
+}
+
+bool pressionou_verm() {
+
+  if(digitalRead(botao_verm) == LOW && flag_verm == 0) { 
+    flag_verm = 1;
+    delay(7);
+    return true;
+  } else if(digitalRead(botao_verm) == HIGH && flag_verm == 1) { // Quando se solta o botão
+    flag_verm = 0;
+    delay(7);
+    return false;
+  }
+
+  return false;
+}
+
+bool pressionou_azul() {
+
+  if(digitalRead(botao_azul) == LOW && flag_azul == 0) { // Quando se aperta o botão
+    flag_azul = 1;
+    delay(7);
+    return true;
+  } else if(digitalRead(botao_azul) == HIGH && flag_azul == 1) { // Quando se solta o botão
+    flag_azul = 0;
+    delay(7);
+    return false;
+  }
+
+  return false;
+}
+
+bool pressionou_amarl() {
+
+  if(digitalRead(botao_amarl) == LOW && flag_amarl == 0) { // Quando se aperta o botão
+    flag_amarl = 1;
+    delay(7);
+    return true;
+  } else if(digitalRead(botao_amarl) == HIGH && flag_amarl == 1) { // Quando se solta o botão
+    flag_amarl = 0;
+    delay(7);
+    return false;
+  }
+return false;
+}
+
+  bool pressionou_verde() {
+
+  if(digitalRead(botao_verde) == LOW && flag_verde == 0) { // Quando se aperta o botão
+    flag_verde = 1;
+    delay(7);
+    return true;
+  } else if(digitalRead(botao_verde) == HIGH && flag_verde == 1) { // Quando se solta o botão
+    flag_verde = 0;
+    delay(7);
+    return false;
+  }
+
+  return false;
+}
+
+void turno_jogo(int rodada) {
+
+  Serial.println("Turno do Jogo: rodada " + (String) rodada);
+  
+  desliga_leds();
+  
+  for(int i = 0; i < rodada; i++) {
+        
+    if(memoria_esp[i] == 0) digitalWrite(led_verm, HIGH);
+    else if(memoria_esp[i] == 1) digitalWrite(led_azul, HIGH);
+    else if(memoria_esp[i] == 2) digitalWrite(led_amarl, HIGH);
+    else if(memoria_esp[i] == 3) digitalWrite(led_verde, HIGH);
+
+    delay(tempo_dificuldade);
+    
+    desliga_leds();
+
+    delay(tempo_dificuldade/2);
+    
+  }
+}
+
+void turno_jogador(int rodada) {
+
+  Serial.println("Turno do Jogador: rodada " + (String) rodada);
+  
+  int leitura = 0;
+  
+  while(leitura < rodada) {
+    
+    desliga_leds();
+    
+    if(pressionou_verm()) {
+      Serial.println("Vermelho");
+      memoria_jogador[leitura] = 0;
+      digitalWrite(led_verm, HIGH);
+      delay(200);
+      leitura++;
+    }
+
+  else if(pressionou_azul()) {
+      Serial.println("Azul");
+      memoria_jogador[leitura] = 1;
+      digitalWrite(led_azul, HIGH);
+      delay(200);
+      leitura++;
+    }
+
+     else  if(pressionou_amarl()) {
+      Serial.println("Amarelo");
+      memoria_jogador[leitura] = 2;
+      digitalWrite(led_amarl, HIGH);
+      delay(200);
+      leitura++;
+    }
+
+         else  if(pressionou_verde()) {
+      Serial.println("verde");
+      memoria_jogador[leitura] = 3;
+      digitalWrite(led_verde, HIGH);
+      delay(200);
+      leitura++;
+    }
+  }
+  
+  delay(1000);
+  desliga_leds();
+}
+
+bool confere(int rodada) {
+  
+  for(int i = 0; i<rodada; i++) {
+    if(memoria_esp[i] != memoria_jogador[i]) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+void liga_leds() {
+  digitalWrite(led_verm, HIGH);
+  digitalWrite(led_azul, HIGH);
+  digitalWrite(led_amarl, HIGH);
+  digitalWrite(led_verde, HIGH);
+}
+
+void desliga_leds() {
+  digitalWrite(led_verm, LOW);
+  digitalWrite(led_azul, LOW);
+  digitalWrite(led_amarl, LOW);
+  digitalWrite(led_verde, LOW);
+}
+
+void pisca_leds(int num) {
+  for(int i = 0; i < num; i++) {
+    liga_leds();
+    delay(500);
+    
+    desliga_leds();
+    delay(500); 
+  }
+}
+
+void leds_derrota() {
+  
+  for(int i=0; i<15;i++) {
+    liga_leds();
+    delay(100);
+
+    desliga_leds();
+    delay(100); 
+  }
+}
+
+void leds_vitoria() {
+  
+  desliga_leds();
+  
+  for(int i=0; i<15;i++) {
+    if(i % 4 == 0) {
+        digitalWrite(led_verm, HIGH);
+        digitalWrite(led_azul, LOW);
+        digitalWrite(led_amarl, LOW);
+        digitalWrite(led_verde, LOW);
+        
+    }
+    
+    else if(i % 4 == 1){
+        digitalWrite(led_verm, LOW);
+        digitalWrite(led_azul, HIGH);
+        digitalWrite(led_amarl, LOW);
+        digitalWrite(led_verde, LOW);
+    }
+    
+    else if(i % 4 == 2){
+        digitalWrite(led_verm, LOW);
+        digitalWrite(led_azul, LOW);
+        digitalWrite(led_amarl, HIGH);
+        digitalWrite(led_verde, LOW);
+    }
+
+    else if(i % 4 == 3){
+        digitalWrite(led_verm, LOW);
+        digitalWrite(led_azul, LOW);
+        digitalWrite(led_amarl, LOW);
+        digitalWrite(led_verde, HIGH);
+    }
+    delay(200);
+  }
+
+  desliga_leds();
+}
